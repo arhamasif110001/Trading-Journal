@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arham's Journal — Trading Journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#14110C;
+    --panel:#1E1A13;
+    --panel-2:#261F14;
+    --line:#3A2F1E;
+    --parchment:#F1E9D8;
+    --muted:#9C8F73;
+    --gold:#D4AF37;
+    --gold-deep:#A67C1E;
+    --gold-dim:rgba(212,175,55,0.16);
+    --rose:#B2504B;
+    --rose-dim:rgba(178,80,75,0.16);
+    --glow-green:#3DDC84;
+    --glow-green-dim:rgba(61,220,132,0.20);
+    --glow-red:#FF5C5C;
+    --glow-red-dim:rgba(255,92,92,0.20);
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--ink);color:var(--parchment);font-family:'Inter',system-ui,sans-serif;min-height:100vh;padding:0 0 4rem;}
+  ::selection{background:var(--gold-deep);color:#1A1408;}
+  h1,h2,h3{font-family:'Fraunces',Georgia,serif;font-weight:500;margin:0;text-shadow:0 0 6px rgba(241,233,216,0.55), 0 0 14px rgba(241,233,216,0.25);}
+  .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px;}
+
+  header{border-bottom:1px solid var(--line);padding:28px 0 22px;}
+  .acctRow{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;align-items:center;}
+  .acctTab{
+    display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:999px;padding:6px 8px 6px 14px;cursor:pointer;font-size:13px;color:var(--muted);
+  }
+  .acctTab.active{border-color:var(--gold-deep);color:var(--parchment);background:var(--gold-dim);}
+  .acctTab .tabBtns{display:flex;gap:2px;}
+  .acctTab .tabIconBtn{
+    background:none;border:none;color:inherit;cursor:pointer;font-size:11px;opacity:0.7;
+    padding:3px 6px;border-radius:999px;
+  }
+  .acctTab .tabIconBtn:hover{opacity:1;background:rgba(0,0,0,0.15);}
+  .acctAddBtn{
+    background:none;border:1px dashed var(--line);color:var(--muted);border-radius:999px;
+    padding:6px 14px;cursor:pointer;font-size:13px;
+  }
+  .acctAddBtn:hover{color:var(--parchment);border-color:var(--gold-deep);}
+  .headerRow{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:baseline;gap:12px;}
+  .brand h1{font-size:26px;letter-spacing:0.3px;}
+  .brand span{color:var(--muted);font-size:13px;font-family:'IBM Plex Mono',monospace;}
+  .addBtn{background:var(--gold);color:#241D08;border:none;border-radius:var(--radius);padding:11px 20px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:transform .12s ease, background .12s ease;}
+  .addBtn:hover{background:#E4C158;}
+  .addBtn:active{transform:scale(0.97);}
+
+  .statsGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:24px;}
+  .statCard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;}
+  .statCard .l{font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;}
+  .statCard .v{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:500;}
+  .pos{color:var(--glow-green);text-shadow:0 0 6px rgba(61,220,132,0.65), 0 0 14px rgba(61,220,132,0.35);}
+  .neg{color:var(--glow-red);text-shadow:0 0 6px rgba(255,92,92,0.65), 0 0 14px rgba(255,92,92,0.35);}
+
+  /* calendar */
+  .calCard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-top:18px;}
+  .calTop{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+  .calNav{display:flex;align-items:center;gap:12px;}
+  .navBtn{background:none;border:1px solid var(--line);color:var(--parchment);border-radius:7px;width:32px;height:32px;cursor:pointer;font-size:15px;}
+  .navBtn:hover{border-color:var(--gold-deep);}
+  .calTitle{font-size:18px;min-width:170px;text-align:center;text-shadow:0 0 6px rgba(241,233,216,0.55), 0 0 14px rgba(241,233,216,0.25);}
+  .calMonthTotal{font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--muted);}
+  .calGrid{display:grid;grid-template-columns:repeat(7,1fr) 96px;gap:6px;}
+  .calHead{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;padding:2px 4px 8px;}
+  .calHead.weekCol{text-align:center;}
+  .dayCell{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:7px;min-height:72px;
+    padding:6px 8px;cursor:default;position:relative;
+  }
+  .dayCell.hasTrades{cursor:pointer;}
+  .dayCell.hasTrades:hover{border-color:var(--gold-deep);}
+  .dayCell.blank{background:transparent;border-color:transparent;}
+  .dayCell .num{font-size:11px;color:var(--muted);}
+  .dayCell .pnl{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;margin-top:8px;}
+  .dayCell .tCount{font-size:10px;color:var(--muted);margin-top:3px;}
+  .dayCell.win{background:var(--glow-green-dim);border-color:rgba(61,220,132,0.55);box-shadow:0 0 10px rgba(61,220,132,0.30) inset, 0 0 8px rgba(61,220,132,0.25);}
+  .dayCell.loss{background:var(--glow-red-dim);border-color:rgba(255,92,92,0.55);box-shadow:0 0 10px rgba(255,92,92,0.30) inset, 0 0 8px rgba(255,92,92,0.25);}
+  .dayCell.selected{outline:1.5px solid var(--gold);}
+  .weekTotal{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:7px;min-height:64px;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;padding:6px;
+  }
+  .weekTotal .l{font-size:10px;color:var(--muted);text-transform:uppercase;}
+  .weekTotal .v{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;margin-top:4px;}
+
+  .bwRow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;}
+  .bwCard{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:12px 14px;}
+  .bwCard.win{border-color:rgba(61,220,132,0.4);}
+  .bwCard.loss{border-color:rgba(255,92,92,0.4);}
+  .bwCard .l{font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);margin-bottom:6px;}
+  .bwCard .v{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:500;}
+  .bwCard .meta{font-size:12px;color:var(--muted);margin-top:4px;}
+  @media (max-width:520px){ .bwRow{grid-template-columns:1fr;} }
+
+  .dayDetail{margin-top:14px;border-top:1px solid var(--line);padding-top:14px;display:none;}
+  .dayDetail.show{display:block;}
+  .dayDetail .ddHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .ddTrade{display:flex;justify-content:space-between;align-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:13px;}
+  .ddTrade .left{display:flex;align-items:center;gap:10px;}
+  .ddThumb{width:32px;height:32px;border-radius:5px;object-fit:cover;cursor:pointer;border:1px solid var(--line);}
+
+  /* monthly summary */
+  .monthlyPanel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-top:14px;}
+  .monthlyPanel h3{font-size:14px;font-family:'Inter',sans-serif;font-weight:600;margin-bottom:12px;}
+  .chartPanel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-top:14px;}
+  .chartPanel h3{font-size:14px;font-family:'Inter',sans-serif;font-weight:600;margin-bottom:12px;}
+  .chartWrap{position:relative;height:230px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{text-align:left;color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.6px;padding:0 10px 10px;border-bottom:1px solid var(--line);}
+  tbody td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  tbody tr:hover{background:var(--panel-2);}
+
+  .toolbar{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;align-items:center;justify-content:space-between;}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;}
+  select, input, textarea{background:var(--panel-2);border:1px solid var(--line);color:var(--parchment);border-radius:7px;padding:8px 10px;font-family:'Inter',sans-serif;font-size:13px;}
+  select:focus, input:focus, textarea:focus{outline:1px solid var(--gold-deep);}
+
+  .dirTag{font-size:11px;padding:3px 8px;border-radius:5px;font-weight:600;letter-spacing:0.4px;}
+  .dirLong{background:var(--gold-dim);color:var(--gold);}
+  .dirShort{background:var(--rose-dim);color:var(--rose);}
+  .thumb{width:34px;height:34px;border-radius:5px;object-fit:cover;cursor:pointer;border:1px solid var(--line);}
+  .rowBtns{display:flex;gap:6px;}
+  .iconBtn{background:none;border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:5px 8px;cursor:pointer;font-size:12px;}
+  .iconBtn:hover{color:var(--parchment);border-color:var(--gold-deep);}
+  .emptyRow td{text-align:center;color:var(--muted);padding:36px 0;font-style:italic;}
+
+  .overlay{position:fixed;inset:0;background:rgba(10,8,4,0.72);display:none;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;z-index:50;}
+  .overlay.show{display:flex;}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;max-width:600px;width:100%;padding:26px 28px 28px;margin-bottom:40px;}
+  .modal h2{font-size:20px;margin-bottom:18px;}
+  .formGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .formGrid label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px;}
+  .formGrid .full{grid-column:1/-1;}
+  .formGrid input, .formGrid select, .formGrid textarea{width:100%;}
+  .formGrid textarea{resize:vertical;min-height:60px;font-family:'Inter',sans-serif;}
+  .modalActions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;}
+  .btnGhost{background:none;border:1px solid var(--line);color:var(--parchment);padding:10px 18px;border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;font-size:13px;}
+  .btnGhost:hover{border-color:var(--gold-deep);}
+  .btnSave{background:var(--gold);color:#241D08;border:none;padding:10px 18px;border-radius:7px;cursor:pointer;font-weight:600;font-size:13px;font-family:'Inter',sans-serif;}
+  .fileRow{display:flex;align-items:center;gap:10px;}
+  .imgPreview{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line);display:none;}
+  .screenshotModal img{max-width:100%;border-radius:8px;display:block;}
+
+  @media (max-width:900px){
+    .statsGrid{grid-template-columns:repeat(3,1fr);}
+    .calGrid{grid-template-columns:repeat(7,1fr);}
+    .weekTotal{display:none;}
+    .calHead.weekCol{display:none;}
+    table{display:none;}
+    .cardList{display:block !important;}
+  }
+  .cardList{display:none;margin-top:14px;}
+  .tCard{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px;}
+  .tCard .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .tCard .meta{font-size:12px;color:var(--muted);margin-top:4px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="headerRow">
+      <div class="brand"><h1>Arham's Journal</h1><span>Trading journal</span></div>
+      <div style="display:flex;gap:10px;">
+        <button class="btnGhost" id="openBalance">Set balance</button>
+        <button class="addBtn" id="openAdd">+ Log backtest trade</button>
+      </div>
+    </div>
+    <div class="acctRow" id="acctRow"></div>
+  </header>
+
+  <div class="statsGrid" id="statsGrid"></div>
+
+  <div class="calCard">
+    <div class="calTop">
+      <div class="calNav">
+        <button class="navBtn" id="prevMonth">‹</button>
+        <div class="calTitle" id="calTitle"></div>
+        <button class="navBtn" id="nextMonth">›</button>
+      </div>
+      <div class="calMonthTotal" id="calMonthTotal"></div>
+    </div>
+    <div class="calGrid" id="calGrid"></div>
+    <div class="bwRow" id="bwRow"></div>
+    <div class="dayDetail" id="dayDetail">
+      <div class="ddHead">
+        <h3 id="ddTitle" style="font-size:14px;font-family:'Inter',sans-serif;font-weight:600;"></h3>
+        <button class="iconBtn" id="ddClose">Close</button>
+      </div>
+      <div id="ddList"></div>
+    </div>
+  </div>
+
+  <div class="chartPanel">
+    <h3>Daily balance</h3>
+    <div class="chartWrap"><canvas id="balanceChart"></canvas></div>
+  </div>
+
+  <div class="monthlyPanel">
+    <h3>Monthly &amp; weekly performance</h3>
+    <table>
+      <thead><tr><th>Month</th><th>Trades</th><th>Win rate</th><th>Avg R:R</th><th>Net P&L</th></tr></thead>
+      <tbody id="monthlyBody"></tbody>
+    </table>
+  </div>
+
+  <div class="toolbar">
+    <div class="filters">
+      <select id="filterResult">
+        <option value="">All results</option>
+        <option value="win">Wins</option>
+        <option value="loss">Losses</option>
+      </select>
+      <select id="filterTag"><option value="">All tags</option></select>
+    </div>
+  </div>
+
+  <table style="margin-top:14px;">
+    <thead>
+      <tr><th>Date</th><th>Dir</th><th>TF</th><th>Entry</th><th>Exit</th><th>Points</th><th>R:R</th><th>P&L</th><th>Tag</th><th>Shot</th><th></th></tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <div class="cardList" id="cardList"></div>
+</div>
+
+<div class="overlay" id="tradeOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">Log a trade</h2>
+    <div class="formGrid">
+      <div><label>Date</label><input type="date" id="fDate"></div>
+      <div><label>Direction</label><select id="fDirection"><option value="Long">Long</option><option value="Short">Short</option></select></div>
+      <div><label>Timeframe</label><select id="fTF"><option value="">—</option><option>M1</option><option>M5</option><option>M15</option><option>M30</option><option>H1</option><option>H4</option><option>D1</option><option>W1</option></select></div>
+      <div><label>Entry price</label><input type="number" step="0.01" id="fEntry" placeholder="2385.40"></div>
+      <div><label>Exit price</label><input type="number" step="0.01" id="fExit" placeholder="2392.10"></div>
+      <div><label>Stop loss</label><input type="number" step="0.01" id="fSL" placeholder="optional"></div>
+      <div><label>Take profit</label><input type="number" step="0.01" id="fTP" placeholder="optional"></div>
+      <div><label>Lot size</label><input type="number" step="0.01" id="fLots" placeholder="1.0"></div>
+      <div><label>Points (auto, editable)</label><input type="number" step="0.01" id="fPoints"></div>
+      <div><label>R:R (auto, editable)</label><input type="number" step="0.01" id="fRR" placeholder="e.g. 2.0"></div>
+      <div><label>P&L ($)</label><input type="number" step="0.01" id="fPnl" placeholder="e.g. 245.50 or -80"></div>
+      <div class="full"><label>Setup / tag</label><input type="text" id="fTag" placeholder="e.g. Breakout, NY open reversal, FVG retest"></div>
+      <div class="full"><label>Notes</label><textarea id="fNotes" placeholder="Setup, confluence, why it triggered, what you'd change next time..."></textarea></div>
+      <div class="full">
+        <label>Chart screenshot</label>
+        <div class="fileRow"><input type="file" id="fShot" accept="image/*"><img class="imgPreview" id="shotPreview"></div>
+      </div>
+    </div>
+    <div class="modalActions">
+      <button class="btnGhost" id="cancelModal">Cancel</button>
+      <button class="btnSave" id="saveTrade">Save trade</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="acctOverlay">
+  <div class="modal" style="max-width:380px;">
+    <h2 id="acctModalTitle">Add strategy</h2>
+    <div class="formGrid">
+      <div class="full">
+        <label>Strategy name</label>
+        <input type="text" id="fAcctName" placeholder="e.g. ICT model, EMA cross, Breakout system">
+      </div>
+    </div>
+    <div class="modalActions">
+      <button class="btnGhost" id="cancelAcct">Cancel</button>
+      <button class="btnSave" id="saveAcct">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="balanceOverlay">
+  <div class="modal" style="max-width:380px;">
+    <h2>Set starting balance</h2>
+    <div class="formGrid">
+      <div class="full">
+        <label>Starting balance ($)</label>
+        <input type="number" step="0.01" id="fBalance" placeholder="e.g. 5000">
+      </div>
+    </div>
+    <div class="modalActions">
+      <button class="btnGhost" id="cancelBalance">Cancel</button>
+      <button class="btnSave" id="saveBalance">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="shotOverlay">
+  <div class="modal screenshotModal" style="max-width:640px;">
+    <img id="shotFull">
+    <div class="modalActions"><button class="btnGhost" id="closeShot">Close</button></div>
+  </div>
+</div>
+
+<script>
+let trades = [];
+let editingId = null;
+let viewYear, viewMonth;
+let selectedDate = null;
+let accountBalance = null;
+let accounts = [];
+let activeAccountId = null;
+let balanceChart = null;
+
+const todayD = new Date();
+viewYear = todayD.getFullYear();
+viewMonth = todayD.getMonth();
+
+function computePoints(entry, exit, dir){
+  if(!entry || !exit) return 0;
+  const diff = exit - entry;
+  return dir === 'Short' ? -diff : diff;
+}
+function computeRR(entry, sl, tp, dir){
+  if(!entry || !sl || !tp) return null;
+  const risk = Math.abs(entry - sl);
+  const reward = Math.abs(tp - entry);
+  if(risk === 0) return null;
+  return reward / risk;
+}
+
+function newAcctId(){ return 'acct_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
+
+function loadAccounts(){
+  let list = null;
+  try{
+    const res = localStorage.getItem('bt_strategies_list_xauusd');
+    list = res ? JSON.parse(res) : null;
+  }catch(e){ list = null; }
+
+  if(!list || !list.length){
+    const mainId = newAcctId();
+    list = [{id: mainId, name: 'Strategy 1'}];
+    try{ localStorage.setItem('bt_trades_xauusd_'+mainId, '[]'); }catch(e){}
+    try{ localStorage.setItem('bt_strategies_list_xauusd', JSON.stringify(list)); }catch(e){}
+  }
+  accounts = list;
+
+  let lastActive = null;
+  try{
+    lastActive = localStorage.getItem('bt_active_strategy_xauusd');
+  }catch(e){ lastActive = null; }
+
+  activeAccountId = (lastActive && accounts.find(a=>a.id===lastActive)) ? lastActive : accounts[0].id;
+  loadAccountData();
+}
+
+function setActiveAccount(id){
+  activeAccountId = id;
+  try{ localStorage.setItem('bt_active_strategy_xauusd', id); }catch(e){}
+  selectedDate = null;
+  loadAccountData();
+}
+
+function loadAccountData(){
+  try{
+    const res = localStorage.getItem('bt_trades_xauusd_'+activeAccountId);
+    trades = res ? JSON.parse(res) : [];
+  }catch(e){ trades = []; }
+  try{
+    const balRes = localStorage.getItem('bt_balance_xauusd_'+activeAccountId);
+    accountBalance = balRes ? parseFloat(balRes) : null;
+  }catch(e){ accountBalance = null; }
+  render();
+}
+
+function saveBalance(val){
+  accountBalance = val;
+  try{ localStorage.setItem('bt_balance_xauusd_'+activeAccountId, String(val)); }
+  catch(e){ console.error('storage failed', e); }
+}
+function saveTrades(){
+  try{ localStorage.setItem('bt_trades_xauusd_'+activeAccountId, JSON.stringify(trades)); }
+  catch(e){ console.error('storage failed', e); }
+}
+function saveAccountsList(){
+  try{ localStorage.setItem('bt_strategies_list_xauusd', JSON.stringify(accounts)); }
+  catch(e){ console.error('storage failed', e); }
+}
+
+function renderAccountTabs(){
+  const row = document.getElementById('acctRow');
+  row.innerHTML = accounts.map(a=>`
+    <div class="acctTab ${a.id===activeAccountId?'active':''}" data-id="${a.id}">
+      <span data-select="${a.id}">${a.name}</span>
+      <div class="tabBtns">
+        <button class="tabIconBtn" data-rename="${a.id}" title="Rename">✎</button>
+        ${accounts.length>1? `<button class="tabIconBtn" data-delacct="${a.id}" title="Delete">✕</button>` : ''}
+      </div>
+    </div>
+  `).join('') + `<button class="acctAddBtn" id="addAcctBtn">+ Add strategy</button>`;
+
+  row.querySelectorAll('[data-select]').forEach(el=>{
+    el.onclick = ()=> setActiveAccount(el.dataset.select);
+  });
+  row.querySelectorAll('[data-rename]').forEach(el=>{
+    el.onclick = (e)=>{ e.stopPropagation(); openRenameAccount(el.dataset.rename); };
+  });
+  row.querySelectorAll('[data-delacct]').forEach(el=>{
+    el.onclick = (e)=>{ e.stopPropagation(); deleteAccount(el.dataset.delacct); };
+  });
+  document.getElementById('addAcctBtn').onclick = openAddAccount;
+}
+
+let acctModalMode = 'add';
+let acctModalTargetId = null;
+function openAddAccount(){
+  acctModalMode = 'add';
+  document.getElementById('acctModalTitle').textContent = 'Add strategy';
+  document.getElementById('fAcctName').value = '';
+  document.getElementById('acctOverlay').classList.add('show');
+}
+function openRenameAccount(id){
+  acctModalMode = 'rename';
+  acctModalTargetId = id;
+  const acct = accounts.find(a=>a.id===id);
+  document.getElementById('acctModalTitle').textContent = 'Rename strategy';
+  document.getElementById('fAcctName').value = acct ? acct.name : '';
+  document.getElementById('acctOverlay').classList.add('show');
+}
+function deleteAccount(id){
+  if(accounts.length<=1) return;
+  const acct = accounts.find(a=>a.id===id);
+  const ok = confirm(`Delete "${acct ? acct.name : 'this strategy'}" and all its backtest trades? This can't be undone.`);
+  if(!ok) return;
+  accounts = accounts.filter(a=>a.id!==id);
+  saveAccountsList();
+  try{ localStorage.removeItem('bt_trades_xauusd_'+id); }catch(e){}
+  try{ localStorage.removeItem('bt_balance_xauusd_'+id); }catch(e){}
+  if(activeAccountId === id){
+    setActiveAccount(accounts[0].id);
+  } else {
+    renderAccountTabs();
+  }
+}
+
+document.getElementById('cancelAcct').onclick = ()=> document.getElementById('acctOverlay').classList.remove('show');
+document.getElementById('saveAcct').onclick = ()=>{
+  const name = document.getElementById('fAcctName').value.trim();
+  if(!name) return;
+  if(acctModalMode === 'add'){
+    const id = newAcctId();
+    accounts.push({id, name});
+    saveAccountsList();
+    document.getElementById('acctOverlay').classList.remove('show');
+    setActiveAccount(id);
+  } else {
+    const acct = accounts.find(a=>a.id===acctModalTargetId);
+    if(acct){ acct.name = name; saveAccountsList(); renderAccountTabs(); }
+    document.getElementById('acctOverlay').classList.remove('show');
+  }
+};
+
+function fmtMoney(n){ const s = n<0?'-':''; return s+'$'+Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtPoints(n){ return (n>=0?'+':'')+n.toFixed(2); }
+
+function renderStats(){
+  const grid = document.getElementById('statsGrid');
+  const total = trades.length;
+  const wins = trades.filter(t=>t.pnl>0);
+  const losses = trades.filter(t=>t.pnl<0);
+  const winRate = total ? (wins.length/total*100) : 0;
+  const netPnl = trades.reduce((a,t)=>a+t.pnl,0);
+  const totalPoints = trades.reduce((a,t)=>a+t.points,0);
+  const rrVals = trades.filter(t=>t.rr!=null && !isNaN(t.rr)).map(t=>t.rr);
+  const avgRR = rrVals.length ? (rrVals.reduce((a,b)=>a+b,0)/rrVals.length) : null;
+
+  const cards = [
+    {l:'Total trades', v: total, cls:''},
+    {l:'Win rate', v: total? winRate.toFixed(1)+'%' : '—', cls:''},
+    {l:'Net P&L', v: fmtMoney(netPnl), cls: netPnl>=0?'pos':'neg'},
+    {l:'Avg R:R', v: avgRR!=null ? avgRR.toFixed(2) : '—', cls:''},
+    {l:'Total points', v: fmtPoints(totalPoints), cls: totalPoints>=0?'pos':'neg'},
+    {l:'Wins / losses', v: wins.length+' / '+losses.length, cls:''},
+  ];
+  if(accountBalance != null && !isNaN(accountBalance)){
+    const current = accountBalance + netPnl;
+    const growthPct = accountBalance !== 0 ? (netPnl/accountBalance*100) : 0;
+    cards.push({l:'Starting balance', v: fmtMoney(accountBalance), cls:''});
+    cards.push({l:'Current balance', v: fmtMoney(current), cls: netPnl>=0?'pos':'neg'});
+    cards.push({l:'Growth', v: (growthPct>=0?'+':'')+growthPct.toFixed(2)+'%', cls: growthPct>=0?'pos':'neg'});
+  }
+  grid.innerHTML = cards.map(c=>`<div class="statCard"><div class="l">${c.l}</div><div class="v ${c.cls}">${c.v}</div></div>`).join('');
+}
+
+function tradesOnDate(dateStr){ return trades.filter(t=>t.date===dateStr); }
+
+function renderCalendar(){
+  const title = document.getElementById('calTitle');
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  title.textContent = monthNames[viewMonth]+' '+viewYear;
+
+  const first = new Date(viewYear, viewMonth, 1);
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  const startWeekday = first.getDay();
+
+  const grid = document.getElementById('calGrid');
+  let html = '';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d=> html += `<div class="calHead">${d}</div>`);
+  html += `<div class="calHead weekCol">Week</div>`;
+
+  let cellsInRow = [];
+  let weekPnl = 0;
+  let monthPnl = 0;
+  let hasWeekData = false;
+
+  const flushWeek = ()=>{
+    html += cellsInRow.join('');
+    html += `<div class="weekTotal"><div class="l">Week</div><div class="v ${weekPnl>=0?'pos':'neg'}">${hasWeekData? fmtMoney(weekPnl) : '—'}</div></div>`;
+    cellsInRow = [];
+    weekPnl = 0;
+    hasWeekData = false;
+  };
+
+  for(let i=0;i<startWeekday;i++){ cellsInRow.push(`<div class="dayCell blank"></div>`); }
+
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayTrades = tradesOnDate(dateStr);
+    const dayPnl = dayTrades.reduce((a,t)=>a+t.pnl,0);
+    let cls = 'dayCell';
+    if(dayTrades.length){
+      cls += dayPnl>=0 ? ' win hasTrades' : ' loss hasTrades';
+      weekPnl += dayPnl;
+      hasWeekData = true;
+      monthPnl += dayPnl;
+    }
+    if(selectedDate === dateStr) cls += ' selected';
+    cellsInRow.push(`<div class="${cls}" data-date="${dateStr}"><div class="num">${d}</div>${dayTrades.length? `<div class="pnl ${dayPnl>=0?'pos':'neg'}">${fmtMoney(dayPnl)}</div><div class="tCount">${dayTrades.length} trade${dayTrades.length!==1?'s':''}</div>`:''}</div>`);
+
+    if((startWeekday + d) % 7 === 0){ flushWeek(); }
+  }
+  if(cellsInRow.length){
+    while(cellsInRow.length < 7){ cellsInRow.push(`<div class="dayCell blank"></div>`); }
+    flushWeek();
+  }
+
+  grid.innerHTML = html;
+  document.getElementById('calMonthTotal').innerHTML = `Month total: <span class="${monthPnl>=0?'pos':'neg'}">${fmtMoney(monthPnl)}</span>`;
+
+  grid.querySelectorAll('.dayCell.hasTrades').forEach(cell=>{
+    cell.onclick = ()=> selectDay(cell.dataset.date);
+  });
+
+  renderBestWorst();
+}
+
+function renderBestWorst(){
+  const row = document.getElementById('bwRow');
+  const monthPrefix = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}`;
+  const monthTrades = trades.filter(t=>t.date.startsWith(monthPrefix));
+
+  if(!monthTrades.length){
+    row.innerHTML = `
+      <div class="bwCard"><div class="l">Best trade this month</div><div class="v" style="color:var(--muted);">—</div></div>
+      <div class="bwCard"><div class="l">Worst trade this month</div><div class="v" style="color:var(--muted);">—</div></div>
+    `;
+    return;
+  }
+
+  const best = monthTrades.reduce((a,b)=> b.pnl > a.pnl ? b : a);
+  const worst = monthTrades.reduce((a,b)=> b.pnl < a.pnl ? b : a);
+
+  row.innerHTML = `
+    <div class="bwCard ${best.pnl>=0?'win':'loss'}">
+      <div class="l">Best trade this month</div>
+      <div class="v ${best.pnl>=0?'pos':'neg'}">${fmtMoney(best.pnl)}</div>
+      <div class="meta">${best.date} · ${best.direction} · ${best.entry} → ${best.exit}${best.tag? ' · '+best.tag : ''}</div>
+    </div>
+    <div class="bwCard ${worst.pnl>=0?'win':'loss'}">
+      <div class="l">Worst trade this month</div>
+      <div class="v ${worst.pnl>=0?'pos':'neg'}">${fmtMoney(worst.pnl)}</div>
+      <div class="meta">${worst.date} · ${worst.direction} · ${worst.entry} → ${worst.exit}${worst.tag? ' · '+worst.tag : ''}</div>
+    </div>
+  `;
+}
+
+function selectDay(dateStr){
+  selectedDate = selectedDate === dateStr ? null : dateStr;
+  renderCalendar();
+  const detail = document.getElementById('dayDetail');
+  if(!selectedDate){ detail.classList.remove('show'); return; }
+  const list = tradesOnDate(selectedDate);
+  document.getElementById('ddTitle').textContent = selectedDate + ' · ' + list.length + ' trade' + (list.length!==1?'s':'');
+  document.getElementById('ddList').innerHTML = list.map(t=>`
+    <div class="ddTrade">
+      <div class="left">
+        ${t.screenshot? `<img class="ddThumb" src="${t.screenshot}" data-view="1">` : ''}
+        <span class="dirTag ${t.direction==='Long'?'dirLong':'dirShort'}">${t.direction}</span>
+        ${t.tf? `<span class="mono" style="color:var(--muted);">${t.tf}</span>` : ''}
+        <span class="mono">${t.entry} → ${t.exit}</span>
+        <span class="mono ${t.pnl>=0?'pos':'neg'}">${fmtMoney(t.pnl)}</span>
+      </div>
+      <div class="rowBtns">
+        <button class="iconBtn" data-edit="${t.id}">Edit</button>
+        <button class="iconBtn" data-del="${t.id}">Del</button>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('ddList').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEdit(b.dataset.edit));
+  document.getElementById('ddList').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>deleteTrade(b.dataset.del));
+  document.getElementById('ddList').querySelectorAll('[data-view]').forEach(img=>img.onclick=()=>{
+    document.getElementById('shotFull').src = img.src;
+    document.getElementById('shotOverlay').classList.add('show');
+  });
+  detail.classList.add('show');
+}
+document.getElementById('ddClose').onclick = ()=>{ selectedDate=null; renderCalendar(); document.getElementById('dayDetail').classList.remove('show'); };
+
+document.getElementById('prevMonth').onclick = ()=>{
+  viewMonth--; if(viewMonth<0){viewMonth=11; viewYear--;}
+  selectedDate=null; document.getElementById('dayDetail').classList.remove('show');
+  renderCalendar();
+};
+document.getElementById('nextMonth').onclick = ()=>{
+  viewMonth++; if(viewMonth>11){viewMonth=0; viewYear++;}
+  selectedDate=null; document.getElementById('dayDetail').classList.remove('show');
+  renderCalendar();
+};
+
+function renderMonthly(){
+  const body = document.getElementById('monthlyBody');
+  const byMonth = {};
+  trades.forEach(t=>{
+    const key = t.date.substring(0,7);
+    if(!byMonth[key]) byMonth[key] = [];
+    byMonth[key].push(t);
+  });
+  const keys = Object.keys(byMonth).sort().reverse();
+  if(!keys.length){
+    body.innerHTML = `<tr class="emptyRow"><td colspan="5">No trades logged yet.</td></tr>`;
+    return;
+  }
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  body.innerHTML = keys.map(k=>{
+    const list = byMonth[k];
+    const wins = list.filter(t=>t.pnl>0).length;
+    const wr = (wins/list.length*100).toFixed(1);
+    const net = list.reduce((a,t)=>a+t.pnl,0);
+    const rrVals = list.filter(t=>t.rr!=null && !isNaN(t.rr)).map(t=>t.rr);
+    const avgRR = rrVals.length ? (rrVals.reduce((a,b)=>a+b,0)/rrVals.length).toFixed(2) : '—';
+    const [y,m] = k.split('-');
+    const label = monthNames[parseInt(m,10)-1]+' '+y;
+    return `<tr><td>${label}</td><td>${list.length}</td><td>${wr}%</td><td>${avgRR}</td><td class="${net>=0?'pos':'neg'}">${fmtMoney(net)}</td></tr>`;
+  }).join('');
+}
+
+function renderTagFilter(){
+  const sel = document.getElementById('filterTag');
+  const current = sel.value;
+  const tags = [...new Set(trades.map(t=>t.tag).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">All tags</option>' + tags.map(t=>`<option value="${t}">${t}</option>`).join('');
+  sel.value = current;
+}
+
+function renderTable(){
+  const body = document.getElementById('tableBody');
+  const cardList = document.getElementById('cardList');
+  const fRes = document.getElementById('filterResult').value;
+  const fTag = document.getElementById('filterTag').value;
+
+  let list = [...trades].sort((a,b)=> new Date(b.date)-new Date(a.date));
+  if(fRes==='win') list = list.filter(t=>t.pnl>0);
+  if(fRes==='loss') list = list.filter(t=>t.pnl<0);
+  if(fTag) list = list.filter(t=>t.tag===fTag);
+
+  if(!list.length){
+    body.innerHTML = `<tr class="emptyRow"><td colspan="11">No backtest trades logged yet. Click "Log backtest trade" to add your first entry.</td></tr>`;
+    cardList.innerHTML = '';
+    return;
+  }
+
+  body.innerHTML = list.map(t=>`
+    <tr>
+      <td class="mono">${t.date}</td>
+      <td><span class="dirTag ${t.direction==='Long'?'dirLong':'dirShort'}">${t.direction}</span></td>
+      <td class="mono">${t.tf||'—'}</td>
+      <td class="mono">${t.entry}</td>
+      <td class="mono">${t.exit}</td>
+      <td class="mono ${t.points>=0?'pos':'neg'}">${fmtPoints(t.points)}</td>
+      <td class="mono">${t.rr!=null?t.rr.toFixed(2):'—'}</td>
+      <td class="mono ${t.pnl>=0?'pos':'neg'}">${fmtMoney(t.pnl)}</td>
+      <td>${t.tag||''}</td>
+      <td>${t.screenshot? `<img class="thumb" src="${t.screenshot}" data-view="1">` : ''}</td>
+      <td><div class="rowBtns"><button class="iconBtn" data-edit="${t.id}">Edit</button><button class="iconBtn" data-del="${t.id}">Del</button></div></td>
+    </tr>
+  `).join('');
+
+  cardList.innerHTML = list.map(t=>`
+    <div class="tCard">
+      <div class="top"><span class="dirTag ${t.direction==='Long'?'dirLong':'dirShort'}">${t.direction}</span><span class="mono ${t.pnl>=0?'pos':'neg'}">${fmtMoney(t.pnl)}</span></div>
+      <div class="meta mono">${t.date}${t.tf? ' · '+t.tf : ''} · ${t.entry} → ${t.exit}</div>
+      <div class="meta mono">${fmtPoints(t.points)} pts · R:R ${t.rr!=null?t.rr.toFixed(2):'—'}</div>
+      ${t.tag? `<div class="meta">${t.tag}</div>`:''}
+      <div class="rowBtns" style="margin-top:10px;"><button class="iconBtn" data-edit="${t.id}">Edit</button><button class="iconBtn" data-del="${t.id}">Del</button></div>
+    </div>
+  `).join('');
+
+  [body, cardList].forEach(el=>{
+    el.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEdit(b.dataset.edit));
+    el.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>deleteTrade(b.dataset.del));
+  });
+  body.querySelectorAll('.thumb').forEach(img=>img.onclick=()=>{
+    document.getElementById('shotFull').src = img.src;
+    document.getElementById('shotOverlay').classList.add('show');
+  });
+}
+
+function renderBalanceChart(){
+  const canvas = document.getElementById('balanceChart');
+  if(!canvas || typeof Chart === 'undefined') return;
+
+  const byDate = {};
+  trades.forEach(t=>{ byDate[t.date] = (byDate[t.date]||0) + t.pnl; });
+  const dates = Object.keys(byDate).sort();
+
+  const base = (accountBalance != null && !isNaN(accountBalance)) ? accountBalance : 0;
+  const labels = [];
+  const data = [];
+
+  if(accountBalance != null && !isNaN(accountBalance)){
+    labels.push('Start');
+    data.push(base);
+  }
+  let running = base;
+  dates.forEach(d=>{
+    running += byDate[d];
+    labels.push(d);
+    data.push(Math.round(running*100)/100);
+  });
+
+  if(balanceChart){ balanceChart.destroy(); balanceChart = null; }
+  if(!dates.length){
+    canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+    return;
+  }
+
+  balanceChart = new Chart(canvas, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        data,
+        borderColor:'#D4AF37',
+        backgroundColor:'rgba(212,175,55,0.10)',
+        fill:true,
+        tension:0.25,
+        pointRadius:2,
+        pointBackgroundColor:'#D4AF37',
+        borderWidth:2
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{ display:false },
+        tooltip:{ callbacks:{ label: (ctx)=> '$'+ctx.parsed.y.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) } }
+      },
+      scales:{
+        x:{ ticks:{ color:'#9C8F73', maxTicksLimit:8, font:{size:10} }, grid:{ color:'rgba(156,143,115,0.12)' } },
+        y:{ ticks:{ color:'#9C8F73', font:{size:10}, callback:(v)=> '$'+v.toLocaleString() }, grid:{ color:'rgba(156,143,115,0.12)' } }
+      }
+    }
+  });
+}
+
+function render(){
+  renderAccountTabs();
+  renderStats();
+  renderCalendar();
+  renderBalanceChart();
+  renderMonthly();
+  renderTagFilter();
+  renderTable();
+  if(selectedDate) selectDay(selectedDate);
+}
+
+const overlay = document.getElementById('tradeOverlay');
+document.getElementById('openAdd').onclick = ()=> openAdd();
+document.getElementById('cancelModal').onclick = ()=> overlay.classList.remove('show');
+document.getElementById('closeShot').onclick = ()=> document.getElementById('shotOverlay').classList.remove('show');
+
+const balanceOverlay = document.getElementById('balanceOverlay');
+document.getElementById('openBalance').onclick = ()=>{
+  document.getElementById('fBalance').value = accountBalance != null ? accountBalance : '';
+  balanceOverlay.classList.add('show');
+};
+document.getElementById('cancelBalance').onclick = ()=> balanceOverlay.classList.remove('show');
+document.getElementById('saveBalance').onclick = ()=>{
+  const val = parseFloat(document.getElementById('fBalance').value);
+  if(!isNaN(val)){
+    saveBalance(val);
+    render();
+  }
+  balanceOverlay.classList.remove('show');
+};
+
+function recalc(){
+  const entry = parseFloat(document.getElementById('fEntry').value);
+  const exit = parseFloat(document.getElementById('fExit').value);
+  const sl = parseFloat(document.getElementById('fSL').value);
+  const tp = parseFloat(document.getElementById('fTP').value);
+  const dir = document.getElementById('fDirection').value;
+  if(entry && exit){ document.getElementById('fPoints').value = computePoints(entry, exit, dir).toFixed(2); }
+  const rr = computeRR(entry, sl, tp, dir);
+  if(rr!=null){ document.getElementById('fRR').value = rr.toFixed(2); }
+}
+['fEntry','fExit','fSL','fTP','fDirection'].forEach(id=> document.getElementById(id).addEventListener('input', recalc));
+
+function openAdd(){
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Log backtest trade';
+  document.getElementById('fDate').value = new Date().toISOString().substring(0,10);
+  document.getElementById('fDirection').value='Long';
+  document.getElementById('fTF').value='';
+  document.getElementById('fEntry').value='';
+  document.getElementById('fExit').value='';
+  document.getElementById('fSL').value='';
+  document.getElementById('fTP').value='';
+  document.getElementById('fLots').value='';
+  document.getElementById('fPoints').value='';
+  document.getElementById('fRR').value='';
+  document.getElementById('fPnl').value='';
+  document.getElementById('fTag').value='';
+  document.getElementById('fNotes').value='';
+  document.getElementById('fShot').value='';
+  document.getElementById('shotPreview').style.display='none';
+  document.getElementById('shotPreview').removeAttribute('data-pending');
+  overlay.classList.add('show');
+}
+
+function openEdit(id){
+  const t = trades.find(x=>x.id===id);
+  if(!t) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit backtest trade';
+  document.getElementById('fDate').value = t.date;
+  document.getElementById('fDirection').value = t.direction;
+  document.getElementById('fTF').value = t.tf ?? '';
+  document.getElementById('fEntry').value = t.entry ?? '';
+  document.getElementById('fExit').value = t.exit ?? '';
+  document.getElementById('fSL').value = t.sl ?? '';
+  document.getElementById('fTP').value = t.tp ?? '';
+  document.getElementById('fLots').value = t.lots ?? '';
+  document.getElementById('fPoints').value = t.points ?? '';
+  document.getElementById('fRR').value = t.rr ?? '';
+  document.getElementById('fPnl').value = t.pnl ?? '';
+  document.getElementById('fTag').value = t.tag ?? '';
+  document.getElementById('fNotes').value = t.notes ?? '';
+  document.getElementById('fShot').value='';
+  const prev = document.getElementById('shotPreview');
+  if(t.screenshot){ prev.src = t.screenshot; prev.style.display='block'; } else { prev.style.display='none'; }
+  overlay.classList.add('show');
+}
+
+function deleteTrade(id){
+  trades = trades.filter(t=>t.id!==id);
+  saveTrades();
+  render();
+}
+
+document.getElementById('fShot').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const maxW = 480;
+      const scale = Math.min(1, maxW/img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width*scale;
+      canvas.height = img.height*scale;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      document.getElementById('shotPreview').src = dataUrl;
+      document.getElementById('shotPreview').style.display='block';
+      document.getElementById('shotPreview').dataset.pending = dataUrl;
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('saveTrade').onclick = ()=>{
+  const date = document.getElementById('fDate').value || new Date().toISOString().substring(0,10);
+  const direction = document.getElementById('fDirection').value;
+  const tf = document.getElementById('fTF').value;
+  const entry = parseFloat(document.getElementById('fEntry').value) || 0;
+  const exit = parseFloat(document.getElementById('fExit').value) || 0;
+  const sl = parseFloat(document.getElementById('fSL').value) || null;
+  const tp = parseFloat(document.getElementById('fTP').value) || null;
+  const lots = parseFloat(document.getElementById('fLots').value) || 0;
+  const points = parseFloat(document.getElementById('fPoints').value) || 0;
+  const rrRaw = document.getElementById('fRR').value;
+  const rr = rrRaw !== '' ? parseFloat(rrRaw) : null;
+  const pnl = parseFloat(document.getElementById('fPnl').value) || 0;
+  const tag = document.getElementById('fTag').value.trim();
+  const notes = document.getElementById('fNotes').value.trim();
+  const shotEl = document.getElementById('shotPreview');
+  let screenshot = shotEl.style.display==='block' ? (shotEl.dataset.pending || shotEl.src) : null;
+  if(screenshot && screenshot.startsWith('http')) screenshot = null;
+
+  if(editingId){
+    const t = trades.find(x=>x.id===editingId);
+    Object.assign(t, {date,direction,tf,entry,exit,sl,tp,lots,points,rr,pnl,tag,notes,screenshot: screenshot ?? t.screenshot});
+  } else {
+    trades.push({
+      id: 't_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+      date,direction,tf,entry,exit,sl,tp,lots,points,rr,pnl,tag,notes,screenshot
+    });
+  }
+  saveTrades();
+  overlay.classList.remove('show');
+  render();
+};
+
+['filterResult','filterTag'].forEach(id=> document.getElementById(id).addEventListener('change', renderTable));
+
+loadAccounts();
+</script>
+</body>
+</html>
