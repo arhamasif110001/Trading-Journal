@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --ink:#14110C;
@@ -67,7 +68,6 @@
   .pos{color:var(--glow-green);text-shadow:0 0 6px rgba(61,220,132,0.65), 0 0 14px rgba(61,220,132,0.35);}
   .neg{color:var(--glow-red);text-shadow:0 0 6px rgba(255,92,92,0.65), 0 0 14px rgba(255,92,92,0.35);}
 
-  /* calendar */
   .calCard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-top:18px;}
   .calTop{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
   .calNav{display:flex;align-items:center;gap:12px;}
@@ -114,7 +114,6 @@
   .ddTrade .left{display:flex;align-items:center;gap:10px;}
   .ddThumb{width:32px;height:32px;border-radius:5px;object-fit:cover;cursor:pointer;border:1px solid var(--line);}
 
-  /* monthly summary */
   .monthlyPanel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-top:14px;}
   .monthlyPanel h3{font-size:14px;font-family:'Inter',sans-serif;font-weight:600;margin-bottom:12px;}
   .chartPanel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-top:14px;}
@@ -156,6 +155,8 @@
   .imgPreview{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line);display:none;}
   .screenshotModal img{max-width:100%;border-radius:8px;display:block;}
 
+  .syncStatus{font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--muted);margin-right:4px;}
+
   @media (max-width:900px){
     .statsGrid{grid-template-columns:repeat(3,1fr);}
     .calGrid{grid-template-columns:repeat(7,1fr);}
@@ -175,7 +176,8 @@
   <header>
     <div class="headerRow">
       <div class="brand"><h1>Arham's Journal</h1><span>Trading journal</span></div>
-      <div style="display:flex;gap:10px;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="cloudStatus" class="syncStatus">Cloud: Connecting...</span>
         <button class="btnGhost" id="openBalance">Set balance</button>
         <button class="addBtn" id="openAdd">+ Log backtest trade</button>
       </div>
@@ -307,6 +309,61 @@
 </div>
 
 <script>
+// ==================== SUPABASE CONFIGURATION ====================
+const SUPABASE_URL = 'https://htaxlfainwpowyxcwflf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_cs3qGUyc-Woa5Mu4Kdwf5A_jJ5a8k4h';
+
+let supabaseClient = null;
+if (SUPABASE_URL.startsWith('http') && !SUPABASE_URL.includes('PASTE_YOUR')) {
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+
+function updateSyncStatus(msg, color) {
+  const el = document.getElementById('cloudStatus');
+  if (el) {
+    el.textContent = 'Cloud: ' + msg;
+    el.style.color = color || 'var(--muted)';
+  }
+}
+
+async function cloudSyncSave(key, data) {
+  try { localStorage.setItem(key, typeof data === 'string' ? data : JSON.stringify(data)); } catch (e) {}
+  if (!supabaseClient) return;
+  updateSyncStatus('Syncing...', 'var(--gold)');
+  try {
+    const { error } = await supabaseClient.from('journal_data').upsert({
+      id: key,
+      content: data,
+      updated_at: new Date().toISOString()
+    });
+    if (!error) updateSyncStatus('Synced', 'var(--glow-green)');
+    else updateSyncStatus('Sync error', 'var(--glow-red)');
+  } catch (e) {
+    updateSyncStatus('Offline', 'var(--glow-red)');
+  }
+}
+
+async function cloudSyncFetch(key) {
+  if (!supabaseClient) {
+    try {
+      const local = localStorage.getItem(key);
+      return local ? JSON.parse(local) : null;
+    } catch (e) { return null; }
+  }
+  try {
+    const { data, error } = await supabaseClient.from('journal_data').select('content').eq('id', key).single();
+    if (!error && data) {
+      try { localStorage.setItem(key, JSON.stringify(data.content)); } catch (e) {}
+      return data.content;
+    }
+  } catch (e) {}
+  try {
+    const local = localStorage.getItem(key);
+    return local ? JSON.parse(local) : null;
+  } catch (e) { return null; }
+}
+// ================================================================
+
 let trades = [];
 let editingId = null;
 let viewYear, viewMonth;
@@ -335,61 +392,49 @@ function computeRR(entry, sl, tp, dir){
 
 function newAcctId(){ return 'acct_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
 
-function loadAccounts(){
-  let list = null;
-  try{
-    const res = localStorage.getItem('bt_strategies_list_xauusd');
-    list = res ? JSON.parse(res) : null;
-  }catch(e){ list = null; }
+async function loadAccounts(){
+  updateSyncStatus('Loading...', 'var(--gold)');
+  let list = await cloudSyncFetch('bt_strategies_list_xauusd');
 
   if(!list || !list.length){
     const mainId = newAcctId();
     list = [{id: mainId, name: 'Strategy 1'}];
-    try{ localStorage.setItem('bt_trades_xauusd_'+mainId, '[]'); }catch(e){}
-    try{ localStorage.setItem('bt_strategies_list_xauusd', JSON.stringify(list)); }catch(e){}
+    await cloudSyncSave('bt_trades_xauusd_'+mainId, []);
+    await cloudSyncSave('bt_strategies_list_xauusd', list);
   }
   accounts = list;
 
-  let lastActive = null;
-  try{
-    lastActive = localStorage.getItem('bt_active_strategy_xauusd');
-  }catch(e){ lastActive = null; }
-
+  let lastActive = localStorage.getItem('bt_active_strategy_xauusd');
   activeAccountId = (lastActive && accounts.find(a=>a.id===lastActive)) ? lastActive : accounts[0].id;
-  loadAccountData();
+  await loadAccountData();
+  updateSyncStatus('Synced', 'var(--glow-green)');
 }
 
-function setActiveAccount(id){
+async function setActiveAccount(id){
   activeAccountId = id;
   try{ localStorage.setItem('bt_active_strategy_xauusd', id); }catch(e){}
   selectedDate = null;
-  loadAccountData();
+  await loadAccountData();
 }
 
-function loadAccountData(){
-  try{
-    const res = localStorage.getItem('bt_trades_xauusd_'+activeAccountId);
-    trades = res ? JSON.parse(res) : [];
-  }catch(e){ trades = []; }
-  try{
-    const balRes = localStorage.getItem('bt_balance_xauusd_'+activeAccountId);
-    accountBalance = balRes ? parseFloat(balRes) : null;
-  }catch(e){ accountBalance = null; }
+async function loadAccountData(){
+  const res = await cloudSyncFetch('bt_trades_xauusd_'+activeAccountId);
+  trades = Array.isArray(res) ? res : [];
+  
+  const balRes = await cloudSyncFetch('bt_balance_xauusd_'+activeAccountId);
+  accountBalance = (balRes !== null && !isNaN(balRes)) ? parseFloat(balRes) : null;
   render();
 }
 
 function saveBalance(val){
   accountBalance = val;
-  try{ localStorage.setItem('bt_balance_xauusd_'+activeAccountId, String(val)); }
-  catch(e){ console.error('storage failed', e); }
+  cloudSyncSave('bt_balance_xauusd_'+activeAccountId, val);
 }
 function saveTrades(){
-  try{ localStorage.setItem('bt_trades_xauusd_'+activeAccountId, JSON.stringify(trades)); }
-  catch(e){ console.error('storage failed', e); }
+  cloudSyncSave('bt_trades_xauusd_'+activeAccountId, trades);
 }
 function saveAccountsList(){
-  try{ localStorage.setItem('bt_strategies_list_xauusd', JSON.stringify(accounts)); }
-  catch(e){ console.error('storage failed', e); }
+  cloudSyncSave('bt_strategies_list_xauusd', accounts);
 }
 
 function renderAccountTabs(){
@@ -432,15 +477,16 @@ function openRenameAccount(id){
   document.getElementById('fAcctName').value = acct ? acct.name : '';
   document.getElementById('acctOverlay').classList.add('show');
 }
-function deleteAccount(id){
+async function deleteAccount(id){
   if(accounts.length<=1) return;
   const acct = accounts.find(a=>a.id===id);
   const ok = confirm(`Delete "${acct ? acct.name : 'this strategy'}" and all its backtest trades? This can't be undone.`);
   if(!ok) return;
   accounts = accounts.filter(a=>a.id!==id);
   saveAccountsList();
-  try{ localStorage.removeItem('bt_trades_xauusd_'+id); }catch(e){}
-  try{ localStorage.removeItem('bt_balance_xauusd_'+id); }catch(e){}
+  if(supabaseClient){
+    try{ await supabaseClient.from('journal_data').delete().in('id', ['bt_trades_xauusd_'+id, 'bt_balance_xauusd_'+id]); }catch(e){}
+  }
   if(activeAccountId === id){
     setActiveAccount(accounts[0].id);
   } else {
